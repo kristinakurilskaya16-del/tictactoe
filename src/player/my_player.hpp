@@ -37,6 +37,8 @@ class MyPlayer : public IPlayer {
   void sim_clear(int x, int y);
   Sign sim_get(int x, int y) const;
 
+  bool would_win(const State &state, int x, int y);
+
 public:
   MyPlayer(const char *name) : m_sign(Sign::NONE), m_name(name) {}
   void set_sign(Sign sign) override;

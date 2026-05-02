@@ -11,25 +11,32 @@ void MyPlayer::set_sign(Sign sign) { m_sign = sign; }
 const char *MyPlayer::get_name() const { return m_name; }
 
 Point MyPlayer::make_move(const State &state) {
-  auto threats = SequencesAnalyzer::find_all_threats(state, 
-        (m_sign == Sign::X) ? Sign::O : Sign::X);
-    
-    if (!threats.empty()) {
-        auto candidates = get_candidate_moves(state);
-        for (const auto& c : candidates) {
-            auto analysis = SequencesAnalyzer::analyze(state, c.x, c.y);
-            if (analysis.hor.is_threat || analysis.ver.is_threat || 
-                analysis.diag_rd.is_threat || analysis.diag_ld.is_threat) {
-                return c;
-            }
-        }
-    }
+  Sign opponent = (m_sign == Sign::X) ? Sign::O : Sign::X;
 
-    auto candidates = get_candidate_moves(state);
-    if (!candidates.empty()) 
-        return candidates[0];
-    
+  auto candidates = get_candidate_moves(state);
+  if (!candidates.empty()) 
     return {0, 0};
+
+  for (const auto &c : candidates) {
+    if (would_win(state, c.x, c.y)) return c;
+  }
+
+  auto immediate_threats = SequencesAnalyzer::find_all_threats(state, opponent, 5);
+  if (!immediate_threats.empty()) {
+    return immediate_threats[0];
+  }
+
+  for (const auto &c : candidates) {
+    auto analysis = SequencesAnalyzer::analyze(state, c.x, c.y, 5);
+    const Pattern* dirs[4] = {&analysis.hor, &analysis.ver, &analysis.diag_rd, &analysis.diag_ld};
+        
+    for (const auto* pat : dirs) {
+      if (pat->sign == opponent && pat->length == 3 && pat->open_ends == 2) 
+        return c; 
+    }
+  }
+  
+  return candidates[0];
 }
 
 // ==================================================================
@@ -174,6 +181,22 @@ Sign MyPlayer::sim_get(int x, int y) const {
         return Sign::WALL;
     
   return m_sim_board[x + y * m_sim_cols];
+}
+
+bool MyPlayer::would_win(const State &state, int x, int y) {
+  init_sim_board(state);
+  sim_place_sign(x, y, m_sign);
+    
+  static const int dirs[4][2] = {{1,0}, {0,1}, {1,1}, {1,-1}};
+  for (auto &d : dirs) {
+      int count = 1; 
+      for (int step = 1; step < 5; ++step)
+          if (sim_get(x + d[0]*step, y + d[1]*step) == m_sign) ++count; else break;
+      for (int step = 1; step < 5; ++step)
+          if (sim_get(x - d[0]*step, y - d[1]*step) == m_sign) ++count; else break;
+      if (count >= 5) return true;
+  }
+  return false;
 }
 
 }; // namespace ttt::my_player

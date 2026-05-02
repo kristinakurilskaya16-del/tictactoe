@@ -126,9 +126,10 @@ std::vector<Point> SequencesAnalyzer::find_all_threats(const State& state,
             auto dirs = {Point{1,0}, Point{0,1}, Point{1,1}, Point{1,-1}};
             for (const auto& d : dirs) {
                 Pattern pat = scan_direction(state, x, y, d.x, d.y, opponent, win_len);
-                if (pat.is_threat){} 
+                if (pat.is_threat){
                     threats.push_back({x, y});
                     break;
+                }     
             }
         }
     }

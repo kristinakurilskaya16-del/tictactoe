@@ -43,8 +43,6 @@ struct Sequences {
 
 class SequencesAnalyzer {
 private:
-    
-
     static inline Sign safe_get(const State& state, int x, int y);
 
     static inline Pattern scan_one_direction(const State& state, int x, int y, 
