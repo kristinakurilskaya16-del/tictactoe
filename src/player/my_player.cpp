@@ -11,22 +11,35 @@ void MyPlayer::set_sign(Sign sign) { m_sign = sign; }
 const char *MyPlayer::get_name() const { return m_name; }
 
 Point MyPlayer::make_move(const State &state) {
-  auto candidates = get_candidate_moves(state);
+  auto threats = SequencesAnalyzer::find_all_threats(state, 
+        (m_sign == Sign::X) ? Sign::O : Sign::X);
     
-  if (!candidates.empty()) 
-    return candidates[0];
-  
-  return {0, 0};
+    if (!threats.empty()) {
+        auto candidates = get_candidate_moves(state);
+        for (const auto& c : candidates) {
+            auto analysis = SequencesAnalyzer::analyze(state, c.x, c.y);
+            if (analysis.hor.is_threat || analysis.ver.is_threat || 
+                analysis.diag_rd.is_threat || analysis.diag_ld.is_threat) {
+                return c;
+            }
+        }
+    }
+
+    auto candidates = get_candidate_moves(state);
+    if (!candidates.empty()) 
+        return candidates[0];
+    
+    return {0, 0};
 }
 
 // ==================================================================
 
 bool MyPlayer::square_is_free(const State &state, int x, int y) const {
-  return (in_bounds(state, x, y) && state.get_value(x, y) == Sign::NONE);
+  return in_bounds(state, x, y) && state.get_value(x, y) == Sign::NONE;
 }
 
 bool MyPlayer::in_bounds(const State &state, int x, int y) const {
-  return (x >= 0 && x < state.get_opts().cols && y >= 0 && y < state.get_opts().rows);
+  return x >= 0 && x < state.get_opts().cols && y >= 0 && y < state.get_opts().rows;
 }
 
 bool MyPlayer::has_neighbors(const State &state, int x, int y, int radius) const {  
@@ -53,9 +66,10 @@ Point MyPlayer::find_best_start(const State &state) const {
   int cx = state.get_opts().cols / 2;
   int cy = state.get_opts().rows / 2;
 
-  int max_radius = std::max(state.get_opts().cols, state.get_opts().rows);
+  int max_radius = std::max({cx, state.get_opts().cols - 1 - cx, 
+    cy, state.get_opts().rows - 1 - cy});
 
-  for (int r = 0; r < max_radius; ++r) {
+  for (int r = 0; r <= max_radius; ++r) {
     for (int dx = -r; dx <= r; ++dx) {
       for (int dy = -r; dy <= r; ++dy) {
         if (std::abs(dx) != r && std::abs(dy) != r) continue;
@@ -96,12 +110,42 @@ std::vector<Point> MyPlayer::get_candidate_moves(const State &state) const {
   }
 
   std::sort(moves.begin(), moves.end(), [cx, cy](const Point & a, const Point& b) {
-    int dist_a = std::abs(a.x - cx) + std::abs(a.y - cy);
-    int dist_b = std::abs(b.x - cx) + std::abs(b.y - cy);
-    return dist_a < dist_b;
+    return std::abs(a.x - cx) + std::abs(a.y - cy) < 
+          std::abs(b.x - cx) + std::abs(b.y - cy);
   });
 
   return moves; 
+}
+
+std::vector<Point> MyPlayer::get_local_candidate(const State &state, 
+  int local_x, int local_y, int radius) const {
+
+  std::vector<Point> moves;
+
+  int rows = state.get_opts().rows;
+  int cols = state.get_opts().cols;
+  int cx = cols / 2;
+  int cy = rows / 2;
+
+  for (int dx = -radius; dx <= radius; ++dx) {
+    for (int dy = -radius; dy <= radius; ++dy) {
+      if (dx == 0 && dy == 0) continue;
+
+      int x = local_x + dx;
+      int y = local_y + dy;
+
+      if (!square_is_free(state, x, y)) continue;
+      if (has_neighbors(state, x, y, 2))
+        moves.push_back({x, y});
+    }  
+  }
+
+  std::sort(moves.begin(), moves.end(), [cx, cy](const Point & a, const Point& b) {
+    return std::abs(a.x - cx) + std::abs(a.y - cy) < 
+          std::abs(b.x - cx) + std::abs(b.y - cy);
+  });
+
+  return moves;
 }
 
 void MyPlayer::init_sim_board(const State &state) {
@@ -126,7 +170,7 @@ void MyPlayer::sim_clear(int x, int y) {
 }
 
 Sign MyPlayer::sim_get(int x, int y) const {
-  if (x < 0 || x >= m_sim_cols || y < 0 || y < m_sim_rows) 
+  if (x < 0 || x >= m_sim_cols || y < 0 || y >= m_sim_rows) 
         return Sign::WALL;
     
   return m_sim_board[x + y * m_sim_cols];
