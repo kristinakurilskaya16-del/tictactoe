@@ -37,6 +37,10 @@ class MyPlayer : public IPlayer {
   void sim_clear(int x, int y);
   Sign sim_get(int x, int y) const;
 
+  Point find_immediate_win(const State& state);
+  Point find_immediate_block(const State& state, Sign opponent);
+  Point find_strategic_block(const State& state, Sign opponent);
+  Point find_best_by_heuristic(const State& state, Sign opponent);
   bool would_win(const State &state, int x, int y);
 
 public:

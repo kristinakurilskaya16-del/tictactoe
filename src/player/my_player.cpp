@@ -10,34 +10,58 @@ namespace ttt::my_player {
 void MyPlayer::set_sign(Sign sign) { m_sign = sign; }
 const char *MyPlayer::get_name() const { return m_name; }
 
-Point MyPlayer::make_move(const State &state) {
+Point MyPlayer::make_move(const State &state) { 
   Sign opponent = (m_sign == Sign::X) ? Sign::O : Sign::X;
 
-  auto candidates = get_candidate_moves(state);
-  if (!candidates.empty()) 
-    return {0, 0};
+  if (Point win = find_immediate_win(state); win.x >= 0) return win;
 
-  for (const auto &c : candidates) {
-    if (would_win(state, c.x, c.y)) return c;
-  }
+  if (Point block = find_immediate_block(state, opponent); block.x >= 0) return block;
 
-  auto immediate_threats = SequencesAnalyzer::find_all_threats(state, opponent, 5);
-  if (!immediate_threats.empty()) {
-    return immediate_threats[0];
-  }
+  if (Point strat = find_strategic_block(state, opponent); strat.x >= 0) return strat;
 
-  for (const auto &c : candidates) {
-    auto analysis = SequencesAnalyzer::analyze(state, c.x, c.y, 5);
-    const Pattern* dirs[4] = {&analysis.hor, &analysis.ver, &analysis.diag_rd, &analysis.diag_ld};
-        
-    for (const auto* pat : dirs) {
-      if (pat->sign == opponent && pat->length == 3 && pat->open_ends == 2) 
-        return c; 
+  Point best = find_best_by_heuristic(state, opponent);
+
+  if (best.x < 0 || !square_is_free(state, best.x, best.y)) {
+    for (int y = 0; y < state.get_opts().rows; ++y)
+      for (int x = 0; x < state.get_opts().cols; ++x)
+        if (square_is_free(state, x, y)) return {x, y};
     }
-  }
-  
-  return candidates[0];
+    
+  return best;
 }
+
+// Point MyPlayer::make_move(const State &state) {
+//   auto candidates = get_candidate_moves(state);
+//   if (candidates.empty()) return {0, 0};
+
+//   Sign opponent = (m_sign == Sign::X) ? Sign::O : Sign::X;
+
+//   for (auto& c : candidates) if (would_win(state, c.x, c.y)) return c;
+
+//   auto threats = SequencesAnalyzer::find_all_threats(state, opponent, 5);
+//   if (!threats.empty()) return threats[0];
+
+//   for (auto& c : candidates) {
+//     auto seq = SequencesAnalyzer::analyze(state, c.x, c.y, 5);
+//     const Pattern* d[4] = {&seq.hor, &seq.ver, &seq.diag_rd, &seq.diag_ld};
+//     for (auto* p : d) if (p->sign == opponent && p->length == 3 && p->open_ends == 2) return c;
+//   }
+
+//   Point best = candidates[0]; int best_score = -2000000;
+//     for (auto& c : candidates) {
+//       auto seq = SequencesAnalyzer::analyze(state, c.x, c.y, 5);
+//       int score = seq.score_for(m_sign, 5) - seq.score_for(opponent, 5);
+//       if (score > best_score) { best_score = score; best = c; }
+//   }
+
+  
+//   if (!square_is_free(state, best.x, best.y)) {
+//     for (int y = 0; y < state.get_opts().rows; ++y)
+//       for (int x = 0; x < state.get_opts().cols; ++x)
+//         if (square_is_free(state, x, y)) return {x, y};
+//   }
+//   return best;
+// }
 
 // ==================================================================
 
@@ -52,18 +76,17 @@ bool MyPlayer::in_bounds(const State &state, int x, int y) const {
 bool MyPlayer::has_neighbors(const State &state, int x, int y, int radius) const {  
   for (int dx = -radius; dx <= radius; ++dx) {
       for (int dy = -radius; dy <= radius; ++dy) {
-        if (dx == 0 && dy == 0) continue;
+        if (dx || dy) {
 
-        int nx = x + dx;
-        int ny = y + dy;
+          int nx = x + dx;
+          int ny = y + dy;
 
-        if (in_bounds(state, nx, ny)) {
-          const Sign val = state.get_value(nx, ny);
-
-          if (val == Sign::X || val == Sign::O) {
-            return true;
+          if (in_bounds(state, nx, ny)) {
+            Sign val = state.get_value(nx, ny);
+            if (val == Sign::X || val == Sign::O) 
+              return true;
           }
-        }        
+        }      
       }
     }
     return false;
@@ -103,9 +126,7 @@ std::vector<Point> MyPlayer::get_candidate_moves(const State &state) const {
 
   for (int y = 0; y < rows; ++y) {
     for (int x = 0; x < cols; ++x) {
-      if (!square_is_free(state, x, y)) continue;
-
-      if (has_neighbors(state, x, y)) 
+      if (square_is_free(state, x, y) && has_neighbors(state, x, y))
         moves.push_back({x, y}); //агрегация
     }
   }
@@ -191,12 +212,64 @@ bool MyPlayer::would_win(const State &state, int x, int y) {
   for (auto &d : dirs) {
       int count = 1; 
       for (int step = 1; step < 5; ++step)
-          if (sim_get(x + d[0]*step, y + d[1]*step) == m_sign) ++count; else break;
+          if (sim_get(x + d[0]*step, y + d[1]*step) == m_sign) ++count; 
+          else break;
       for (int step = 1; step < 5; ++step)
-          if (sim_get(x - d[0]*step, y - d[1]*step) == m_sign) ++count; else break;
+          if (sim_get(x - d[0]*step, y - d[1]*step) == m_sign) ++count; 
+          else break;
       if (count >= 5) return true;
   }
   return false;
+}
+
+Point MyPlayer::find_immediate_win(const State& state) {
+  auto candidates = get_candidate_moves(state);
+    for (const auto& c : candidates) {
+      if (would_win(state, c.x, c.y)) 
+        return c;
+    }
+        
+    return {-1, -1};
+}
+
+Point MyPlayer::find_immediate_block(const State& state, Sign opponent) {
+  auto threats = SequencesAnalyzer::find_all_threats(state, opponent, 5);
+  if (!threats.empty()) 
+    return threats[0];
+  return {-1, -1};
+}
+
+Point MyPlayer::find_strategic_block(const State& state, Sign opponent) {
+    auto candidates = get_candidate_moves(state);
+    for (const auto& c : candidates) {
+      auto seq = SequencesAnalyzer::analyze(state, c.x, c.y, 5);
+      const Pattern* dirs[4] = {&seq.hor, &seq.ver, &seq.diag_rd, &seq.diag_ld};
+      for (const auto* p : dirs) {
+        if (p->sign == opponent && p->length == 3 && p->open_ends == 2)
+          return c;
+      }
+    }
+
+    return {-1, -1};
+}
+
+Point MyPlayer::find_best_by_heuristic(const State& state, Sign opponent) {
+    auto candidates = get_candidate_moves(state);
+    if (candidates.empty()) 
+      return {-1, -1};
+
+    Point best = candidates[0];
+    int best_score = -2000000;
+
+    for (const auto& c : candidates) {
+        auto seq = SequencesAnalyzer::analyze(state, c.x, c.y, 5);
+        int score = seq.score_for(m_sign, 5) - seq.score_for(opponent, 5);
+        if (score > best_score) {
+            best_score = score;
+            best = c;
+        }
+    }
+    return best;
 }
 
 }; // namespace ttt::my_player
