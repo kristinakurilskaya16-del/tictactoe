@@ -15,13 +15,14 @@ int Sequences::score_for(Sign player, int win_len) const {
             return (pat->sign == player) ? +10000 : -10000;
         }
         
-        static const int weights[5][3] = {
+        static const int weights[6][3] = {
             // 0 ends, 1 end, 2 ends
             {    0,     1,     5},  // len=1
             {    0,    10,    50},  // len=2
             {    0,   100,   500},  // len=3
             {    0,  1000,  5000},  // len=4
-            { 9999, 9999,  9999}    // len=5 (победа)
+            { 9999, 9999,  9999},   // len=5 (победа)
+            { 9999, 9999,  9999}    
         };
         
         int w = weights[pat->length][pat->open_ends];

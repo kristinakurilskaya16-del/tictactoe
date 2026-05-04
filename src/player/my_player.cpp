@@ -176,7 +176,7 @@ std::vector<Point> MyPlayer::get_local_candidate(const State &state,
   return moves;
 }
 
-void MyPlayer::init_sim_board(const State &state) {
+void MyPlayer::init_sim_board(const State &state) const {
   m_sim_rows = state.get_opts().rows;
   m_sim_cols = state.get_opts().cols;
 
@@ -187,12 +187,12 @@ void MyPlayer::init_sim_board(const State &state) {
   }
 }
 
-void MyPlayer::sim_place_sign(int x, int y, Sign sign) {
+void MyPlayer::sim_place_sign(int x, int y, Sign sign) const {
   if (x >= 0 && x < m_sim_cols && y >= 0 && y < m_sim_rows) 
     m_sim_board[x + y * m_sim_cols] = sign;
 }
 
-void MyPlayer::sim_clear(int x, int y) {
+void MyPlayer::sim_clear(int x, int y) const {
   if (x >= 0 && x < m_sim_cols && y >= 0 && y < m_sim_rows) 
     m_sim_board[x + y * m_sim_cols] = Sign::NONE;
 }
@@ -204,7 +204,7 @@ Sign MyPlayer::sim_get(int x, int y) const {
   return m_sim_board[x + y * m_sim_cols];
 }
 
-bool MyPlayer::would_win(const State &state, int x, int y) {
+bool MyPlayer::would_win(const State &state, int x, int y) const {
   init_sim_board(state);
   sim_place_sign(x, y, m_sign);
     
@@ -222,7 +222,7 @@ bool MyPlayer::would_win(const State &state, int x, int y) {
   return false;
 }
 
-Point MyPlayer::find_immediate_win(const State& state) {
+Point MyPlayer::find_immediate_win(const State& state) const {
   auto candidates = get_candidate_moves(state);
     for (const auto& c : candidates) {
       if (would_win(state, c.x, c.y)) 
@@ -232,14 +232,14 @@ Point MyPlayer::find_immediate_win(const State& state) {
     return {-1, -1};
 }
 
-Point MyPlayer::find_immediate_block(const State& state, Sign opponent) {
+Point MyPlayer::find_immediate_block(const State& state, Sign opponent) const {
   auto threats = SequencesAnalyzer::find_all_threats(state, opponent, 5);
   if (!threats.empty()) 
     return threats[0];
   return {-1, -1};
 }
 
-Point MyPlayer::find_strategic_block(const State& state, Sign opponent) {
+Point MyPlayer::find_strategic_block(const State& state, Sign opponent) const {
     auto candidates = get_candidate_moves(state);
     for (const auto& c : candidates) {
       auto seq = SequencesAnalyzer::analyze(state, c.x, c.y, 5);
@@ -253,7 +253,7 @@ Point MyPlayer::find_strategic_block(const State& state, Sign opponent) {
     return {-1, -1};
 }
 
-Point MyPlayer::find_best_by_heuristic(const State& state, Sign opponent) {
+Point MyPlayer::find_best_by_heuristic(const State& state, Sign opponent) const {
     auto candidates = get_candidate_moves(state);
     if (candidates.empty()) 
       return {-1, -1};
