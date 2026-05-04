@@ -33,19 +33,18 @@ struct Pattern {
 };
 
 struct Sequences {
-    Pattern hor;
-    Pattern ver;
-    Pattern diag_rd;
-    Pattern diag_ld;
+    Pattern hor, ver, diag_rd, diag_ld;
 
-    int score_for(Sign player, int win_len) const;
+    int score_for(Sign player, int win_len = 5) const;
 };
 
 class SequencesAnalyzer {
 private:
-    
-
-    static inline Sign safe_get(const State& state, int x, int y);
+    static inline Sign safe_get(const State& state, int x, int y) {
+        if ( x < 0 || y < 0 || x >= state.get_opts().cols || y >= state.get_opts().rows)
+            return Sign::WALL;
+        return state.get_value(x, y);
+    }
 
     static inline Pattern scan_one_direction(const State& state, int x, int y, 
                                     int dx, int dy, int win_len);
