@@ -1,39 +1,60 @@
 #include "sequences.hpp"
+#include "weight.hpp"
 #include <vector>
 #include <array>
 
 namespace ttt::my_player {  
+
+int Pattern::get_pattern_weight() const {
+    if (sign == Sign::NONE) return 0;
+   
+    if (length >= 5) return WEIGHT_WIN;
+
+    if (length == 4) {
+        if (open_ends == 2 && !has_gap) return WEIGHT_OPEN_FOUR;      
+        if (open_ends == 1 && !has_gap) return WEIGHT_HALF_FOUR;      
+        if (has_gap) return WEIGHT_GAP_FOUR;                           
+    }
+   
+    if (length == 3) {
+        if (open_ends == 2 && !has_gap) return WEIGHT_OPEN_THREE;    
+        if (open_ends == 1 && !has_gap) return WEIGHT_HALF_THREE;      
+        if (has_gap) return WEIGHT_GAP_THREE;                         
+    }
+    
+    if (length == 2) {
+        if (open_ends == 2 && !has_gap) return WEIGHT_OPEN_TWO;        
+        if (open_ends >= 1 && !has_gap) return WEIGHT_HALF_TWO;      
+        if (has_gap) return WEIGHT_GAP_TWO;                            
+    }
+    
+    if (length == 1) return WEIGHT_POSITION;
+    
+    return 0;
+}
 
 int Sequences::score_for(Sign player, int win_len) const {
     int score = 0;
     const Pattern* patterns[] = {&hor, &ver, &diag_rd, &diag_ld};
     
     for (const auto* pat : patterns) {
-        if (!pat->is_relevant() || pat->sign != player) continue;
+        if (pat->sign != player) continue;
+        
+        int weight = pat->get_pattern_weight();
+        
+        if (player == pat->sign) 
+            score += weight;
+        else 
+            score += weight * DEFENSE_MULTIPLIER / ATTACK_MULTIPLIER;
+        
+        if (pat->open_ends > 0) 
+            score += WEIGHT_POSITION * pat->open_ends;
 
-        if (pat->is_threat) {
-            return (pat->sign == player) ? +10000 : -10000;
-        }
-        
-        static const int weights[6][3] = {
-            // 0 ends, 1 end, 2 ends
-            {    0,     1,     5},  // len=1
-            {    0,    10,    50},  // len=2
-            {    0,   100,   500},  // len=3
-            {    0,  1000,  5000},  // len=4
-            { 9999, 9999,  9999},   // len=5 (победа)
-            { 9999, 9999,  9999}    
-        };
-        
-        int w = weights[pat->length][pat->open_ends];
-        if (pat->has_gap) 
-            w /= 2;  
-        score += w;
     }
+    
     return score;
 }
 
-// кеширование?
 inline Pattern SequencesAnalyzer::scan_one_direction(const State& state, int x, int y, 
                                                 int dx, int dy, int win_len) {
     
@@ -128,6 +149,46 @@ std::vector<Point> SequencesAnalyzer::find_all_threats(const State& state,
         }
     }
     return threats;
+}
+
+std::vector<Point> SequencesAnalyzer::find_blocking_moves(const State& state, Sign opponent, int win_len) {
+    std::vector<Point> blocking_moves;
+    int rows = state.get_opts().rows;
+    int cols = state.get_opts().cols;
+    
+    for (int y = 0; y < rows; ++y) {
+        for (int x = 0; x < cols; ++x) {
+            if (state.get_value(x, y) != Sign::NONE) continue;
+            
+            bool is_blocking = false;
+            const int dirs[4][2] = {{1,0}, {0,1}, {1,1}, {1,-1}};
+            
+            for (auto& d : dirs) {
+                int len = 1;
+                for (int step = 1; step < win_len; ++step) {
+                    Sign s = safe_get(state, x + d[0]*step, y + d[1]*step);
+                    if (s == opponent) len++;
+                    else if (s == Sign::NONE) break;
+                    else break;
+                }
+                for (int step = 1; step < win_len; ++step) {
+                    Sign s = safe_get(state, x - d[0]*step, y - d[1]*step);
+                    if (s == opponent) len++;
+                    else if (s == Sign::NONE) break;
+                    else break;
+                }
+                if (len >= 4) { 
+                    is_blocking = true;
+                    break;
+                }
+            }
+            
+            if (is_blocking) {
+                blocking_moves.push_back({x, y});
+            }
+        }
+    }
+    return blocking_moves;
 }
 
 } // namespace ttt::my_player
