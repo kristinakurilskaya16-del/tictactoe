@@ -22,6 +22,7 @@ class MyPlayer : public IPlayer {
   bool square_is_free(const State &state, int x, int y) const;
   bool in_bounds(const State &state, int x, int y) const;
   bool has_neighbors(const State &state, int x, int y, int radius = 2) const;
+  int count_free_cells(const State& state) const;
   Point find_best_start(const State &state) const;
 
   std::vector<Point> get_candidate_moves(const State &state) const;
@@ -37,11 +38,17 @@ class MyPlayer : public IPlayer {
   void sim_clear(int x, int y) const;
   Sign sim_get(int x, int y) const;
 
-  Point find_immediate_win(const State& state) const;
-  Point find_immediate_block(const State& state, Sign opponent) const;
+  bool would_win_fast(const State& state, int x, int y, Sign player) const;
+  Point find_immediate_win_fast(const State& state) const;
+  Point find_immediate_block_fast(const State& state, Sign opponent) const;
+  
+  Point find_gap_block(const State& state, Sign opponent) const;
+
   Point find_strategic_block(const State& state, Sign opponent) const;
   Point find_best_by_heuristic(const State& state, Sign opponent) const;
-  bool would_win(const State &state, int x, int y) const;
+  Point find_endgame_with_sim(const State& state, Sign opponent) const;
+  
+  bool would_win_sim(Sign player) const;
 
 public:
   MyPlayer(const char *name) : m_sign(Sign::NONE), m_name(name) {}
