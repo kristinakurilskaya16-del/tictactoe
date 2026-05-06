@@ -26,8 +26,8 @@ constexpr int WEIGHT_CENTER = 40;        // бонус за центр
 constexpr int WEIGHT_NEIGHBOR = 30;      // бонус за соседей
 
 // Множители для атаки/защиты
-constexpr int ATTACK_MULTIPLIER = 8;    // атака важнее защиты (10:1)
-constexpr int DEFENSE_MULTIPLIER = 12;    // защита чуть меньше атаки
+constexpr int ATTACK_MULTIPLIER = 10;    // атака важнее защиты (10:1)
+constexpr int DEFENSE_MULTIPLIER = 20;    // защита чуть меньше атаки
 
 // Пороги для решений
 constexpr int THREAT_THRESHOLD = 8000;   // порог для определения угрозы

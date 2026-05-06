@@ -19,6 +19,15 @@ class MyPlayer : public IPlayer {
 
   // ===========================================================
 
+  int negamax(const State& state, int depth, int alpha, int beta,
+            Sign current_player, int last_x, int last_y) const;
+
+// Простая оценка позиции (использует существующие веса)
+  int evaluate_position_simple(const State& state, Sign player) const;
+
+// Получение ограниченного списка ходов
+  std::vector<Point> get_top_moves_simple(const State& state, Sign player, int max_moves) const;
+
   bool square_is_free(const State &state, int x, int y) const;
   bool in_bounds(const State &state, int x, int y) const;
   bool has_neighbors(const State &state, int x, int y, int radius = 2) const;

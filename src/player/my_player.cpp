@@ -12,50 +12,263 @@ void MyPlayer::set_sign(Sign sign) { m_sign = sign; }
 const char *MyPlayer::get_name() const { return m_name; }
 
 Point MyPlayer::make_move(const State& state) {
-  Sign opponent = (m_sign == Sign::X) ? Sign::O : Sign::X;
-  
-  // 1. Немедленная победа 
-  if (Point win = find_immediate_win_fast(state); win.x >= 0) 
-    return win;
-  
-  // 2. Первые ходы - в центр (ранняя агрессия)
-  if (state.get_move_no() < 3) {
-    Point start = find_best_start(state);
-    if (start.x >= 0) return start;
-  }
-  
-  // 3. Атака
-  Point best = find_best_by_heuristic(state, opponent);
-  if (best.x >= 0 && square_is_free(state, best.x, best.y)) 
-    return best;
-  
-  // 4. Защита 
-  if (Point block = find_immediate_block_fast(state, opponent); block.x >= 0) 
-    return block;
-  
-  // 5. Блокировка разрывных угроз 
-  if (Point gap_block = find_gap_block(state, opponent); gap_block.x >= 0)
-    return gap_block;
-  
-  // 6. Стратегическая блокировка 
-  if (Point strat = find_strategic_block(state, opponent); strat.x >= 0) 
-    return strat;
-  
-  // 7. Почти конец
-  int free_cells = count_free_cells(state);
-  if (free_cells < 50) {
-    return find_endgame_with_sim(state, opponent);
-  }
-  
-  // 8. Fallback - любой ход
-  for (int y = 0; y < state.get_opts().rows; ++y)
-    for (int x = 0; x < state.get_opts().cols; ++x)
-      if (square_is_free(state, x, y)) return {x, y};
-  
-  return {0, 0};
+    Sign opponent = (m_sign == Sign::X) ? Sign::O : Sign::X;
+    
+    // 1. Немедленная победа
+    if (Point win = find_immediate_win_fast(state); win.x >= 0) 
+        return win;
+    
+    // 2. Критическая блокировка
+    auto candidates = get_candidate_moves(state);
+    for (const auto& c : candidates) {
+        if (would_win_fast(state, c.x, c.y, opponent)) 
+            return c;
+    }
+    
+    // 3. Первые ходы - в центр
+    if (state.get_move_no() < 3) {
+        Point start = find_best_start(state);
+        if (start.x >= 0) return start;
+    }
+    
+    // 4. Определяем глубину в зависимости от стадии игры
+    int free_cells = count_free_cells(state);
+
+    int depth;
+    if (free_cells > 250) depth = 2;
+    else if (free_cells > 120) depth = 4;
+    else depth = 6;
+    
+    // 5. Получаем топ ходы для поиска
+    std::vector<Point> top_moves = get_top_moves_simple(state, m_sign, 8);
+    if (top_moves.empty()) {
+        for (int y = 0; y < state.get_opts().rows; ++y)
+            for (int x = 0; x < state.get_opts().cols; ++x)
+                if (square_is_free(state, x, y)) return {x, y};
+        return {0, 0};
+    }
+    
+    // 6. Negamax поиск
+    Point best_move = top_moves[0];
+    int best_value = -1000000000;
+    int alpha = -1000000000;
+    int beta = 1000000000;
+    
+    for (const auto& move : top_moves) {
+        State new_state = state;
+        new_state.process_move(m_sign, move.x, move.y);
+        
+        int value = -negamax(new_state, depth - 1, -beta, -alpha,
+                             opponent, move.x, move.y);
+        
+        if (value > best_value) {
+            best_value = value;
+            best_move = move;
+        }
+        
+        alpha = std::max(alpha, value);
+        if (alpha >= beta) break;
+    }
+    
+    return best_move;
 }
 
 // ==================================================================
+
+int MyPlayer::evaluate_position_simple(const State& state, Sign player) const {
+    Sign opponent = (player == Sign::X) ? Sign::O : Sign::X;
+    int score = 0;
+    
+    // Считаем ВСЕ пустые клетки с соседями (а не только свои фигуры)
+    for (int x = 0; x < state.get_opts().cols; ++x) {
+        for (int y = 0; y < state.get_opts().rows; ++y) {
+            if (state.get_value(x, y) != Sign::NONE) continue;
+            if (!has_neighbors(state, x, y, 2)) continue;
+            
+            const int dirs[4][2] = {{1,0}, {0,1}, {1,1}, {1,-1}};
+            for (auto& d : dirs) {
+                // СВОИ фигуры (атака) - большой вес
+                int my_len = 1;
+                for (int step = 1; step < 5; ++step) {
+                    Sign s = state.get_value(x + d[0]*step, y + d[1]*step);
+                    if (s == player) my_len++;
+                    else if (s == Sign::NONE) break;
+                    else break;
+                }
+                for (int step = 1; step < 5; ++step) {
+                    Sign s = state.get_value(x - d[0]*step, y - d[1]*step);
+                    if (s == player) my_len++;
+                    else if (s == Sign::NONE) break;
+                    else break;
+                }
+                
+                // ФИГУРЫ ПРОТИВНИКА (защита) - вес чуть меньше
+                int opp_len = 1;
+                for (int step = 1; step < 5; ++step) {
+                    Sign s = state.get_value(x + d[0]*step, y + d[1]*step);
+                    if (s == opponent) opp_len++;
+                    else if (s == Sign::NONE) break;
+                    else break;
+                }
+                for (int step = 1; step < 5; ++step) {
+                    Sign s = state.get_value(x - d[0]*step, y - d[1]*step);
+                    if (s == opponent) opp_len++;
+                    else if (s == Sign::NONE) break;
+                    else break;
+                }
+                
+                // КРИТИЧЕСКИ ВАЖНЫЕ ВЕСА (из вашей weight.hpp)
+                // Свои фигуры
+                if (my_len >= 5) score += 10000000;
+                else if (my_len == 4) score += 100000;
+                else if (my_len == 3) score += 30000;
+                else if (my_len == 2) score += 2000;
+                else if (my_len == 1) score += 50;
+                
+                // Фигуры противника (угрозы, которые нужно блокировать)
+                if (opp_len >= 5) score -= 10000000;
+                else if (opp_len == 4) score -= 200000;  // ВАЖНО! 4 противника
+                else if (opp_len == 3) score -= 30000;
+                else if (opp_len == 2) score -= 2000;
+            }
+        }
+    }
+    
+    // Бонус за центр (для всех фигур)
+    int cx = state.get_opts().cols / 2;
+    int cy = state.get_opts().rows / 2;
+    for (int x = 0; x < state.get_opts().cols; ++x) {
+        for (int y = 0; y < state.get_opts().rows; ++y) {
+            if (state.get_value(x, y) == player) {
+                int dist = abs(x - cx) + abs(y - cy);
+                score += (20 - dist) * 5;
+            }
+        }
+    }
+    
+    return score;
+}
+
+// ==================================================================
+// Получение топ ходов (ограниченное количество)
+// ==================================================================
+
+std::vector<Point> MyPlayer::get_top_moves_simple(const State& state, Sign player, int max_moves) const {
+    Sign opponent = (player == Sign::X) ? Sign::O : Sign::X;
+    std::vector<std::pair<Point, int>> scored;
+    
+    auto candidates = get_candidate_moves(state);
+    if (candidates.empty()) return {};
+    
+    for (const auto& move : candidates) {
+        int score = 0;
+        const int dirs[4][2] = {{1,0}, {0,1}, {1,1}, {1,-1}};
+        
+        for (auto& d : dirs) {
+            // Свои фигуры
+            int my_len = 1;
+            for (int step = 1; step < 5; ++step) {
+                Sign s = state.get_value(move.x + d[0]*step, move.y + d[1]*step);
+                if (s == player) my_len++;
+                else break;
+            }
+            for (int step = 1; step < 5; ++step) {
+                Sign s = state.get_value(move.x - d[0]*step, move.y - d[1]*step);
+                if (s == player) my_len++;
+                else break;
+            }
+            
+            // Фигуры противника
+            int opp_len = 1;
+            for (int step = 1; step < 5; ++step) {
+                Sign s = state.get_value(move.x + d[0]*step, move.y + d[1]*step);
+                if (s == opponent) opp_len++;
+                else break;
+            }
+            for (int step = 1; step < 5; ++step) {
+                Sign s = state.get_value(move.x - d[0]*step, move.y - d[1]*step);
+                if (s == opponent) opp_len++;
+                else break;
+            }
+            
+            // Атака важнее защиты (коэффициенты из weight.hpp)
+            if (my_len >= 5) score += 10000000;
+            else if (my_len == 4) score += 100000;
+            else if (my_len == 3) score += 30000;
+            else if (my_len == 2) score += 2000;
+            else if (my_len == 1) score += 50;
+            
+            if (opp_len >= 4) score += 80000;  // Критическая блокировка
+            else if (opp_len == 3) score += 15000;
+            else if (opp_len == 2) score += 1000;
+        }
+        
+        // Бонус за центр
+        int cx = state.get_opts().cols / 2;
+        int cy = state.get_opts().rows / 2;
+        int dist = abs(move.x - cx) + abs(move.y - cy);
+        score += (20 - dist) * 10;
+        
+        scored.push_back({move, score});
+    }
+    
+    std::sort(scored.begin(), scored.end(),
+        [](const auto& a, const auto& b) { return a.second > b.second; });
+    
+    std::vector<Point> result;
+    for (int i = 0; i < std::min(max_moves, (int)scored.size()); ++i) {
+        result.push_back(scored[i].first);
+    }
+    
+    return result;
+}
+
+// ==================================================================
+// Negamax с альфа-бета отсечением
+// ==================================================================
+
+int MyPlayer::negamax(const State& state, int depth, int alpha, int beta,
+                      Sign current_player, int last_x, int last_y) const {
+  Sign prev_player = (current_player == Sign::X) ? Sign::O : Sign::X;
+  Sign next_player = prev_player;
+
+// Проверяем: предыдущий игрок сделал last move
+  if (last_x >= 0 && last_y >= 0) {
+    if (would_win_fast(state, last_x, last_y, prev_player)) 
+      return -10000000 + depth;
+  }
+    
+     // Достигли максимальной глубины - оцениваем позицию
+    if (depth == 0) {
+        return evaluate_position_simple(state, m_sign);
+    }
+    
+    // Получаем ограниченный список ходов (топ-6 для скорости)
+    std::vector<Point> moves = get_top_moves_simple(state, current_player, 6);
+    if (moves.empty()) return evaluate_position_simple(state, m_sign);
+    
+    int best_value = -1000000000;
+    
+    for (const auto& move : moves) {
+        // Создаем новое состояние (копирование, но с ограниченными ходами терпимо)
+        State new_state = state;
+        new_state.process_move(current_player, move.x, move.y);
+        
+        int value = -negamax(new_state, depth - 1, -beta, -alpha,
+                             next_player, move.x, move.y);
+        
+        if (value > best_value) {
+            best_value = value;
+        }
+        
+        alpha = std::max(alpha, value);
+        if (alpha >= beta) {
+            break;  // Alpha-beta отсечение
+        }
+    }
+    
+    return best_value;
+}
 
 bool MyPlayer::square_is_free(const State &state, int x, int y) const {
   return in_bounds(state, x, y) && state.get_value(x, y) == Sign::NONE;
