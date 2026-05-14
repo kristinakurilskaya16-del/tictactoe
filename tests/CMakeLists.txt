@@ -1,5 +1,15 @@
 cmake_minimum_required(VERSION 3.20.0)
 
+add_executable(ci_tests ci_tests.cpp)
+target_link_libraries(ci_tests tttplayer gtest gtest_main pthread)
+
+target_include_directories(ci_tests PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/..      
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src 
+)
+
+add_test(NAME ci_tests COMMAND ci_tests)
+
 # Always built targets (no dependency on BUILD_TTTCORE)
 add_executable(test_my_player test_my_player.cpp)
 target_link_libraries(test_my_player tttplayer)
