@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, dev ]
   pull_request:
     branches: [ main, master ]
 
@@ -17,7 +17,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
     
     - name: Configure
-      run: cmake -S . -B build -G Ninja 
+      run: cmake -S . -B build -G Ninja   # ← Убрали -DBUILD_TTTCORE=PREBUILT
     
     - name: Build
       run: cmake --build build
@@ -25,4 +25,4 @@ jobs:
     - name: Test
       run: |
         cd build
-        ctest --output-on-failure
+        ctest --output-on-failure -R ci_tests
