@@ -228,10 +228,10 @@ ThreatInfo ThreatEngine::analyze(const State& state, Sign player, int win_len) {
                 
                 if (move_opp.length == 3) {
                     if (move_opp.has_gap) {
-                        if (move_opp.open_ends >= 2) fork_score -= 3; 
-                        else if (move_opp.open_ends == 1) fork_score -= 2;  
+                        if (move_opp.open_ends >= 2) fork_score -= 2; 
+                        else if (move_opp.open_ends == 1) fork_score -= 1;  
                     } else {
-                        if (move_opp.open_ends == 2) fork_score -= 3;  
+                        if (move_opp.open_ends == 2) fork_score -= 2;  
                         else if (move_opp.open_ends == 1) fork_score -= 1;   
                     }
                 }
