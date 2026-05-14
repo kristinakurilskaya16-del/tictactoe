@@ -12,7 +12,7 @@ endif()
 
 # NOTE: set this variable to "PREBUILT" when you downloaded prebuilt tttcore
 # library with baseline player.
-#set(BUILD_TTTCORE "PREBUILT")
+set(BUILD_TTTCORE "PREBUILT")
 
 if (BUILD_TTTCORE STREQUAL "PREBUILT")
   find_library(TTTCORE_LIB libtttcore.a PATHS libs)
@@ -46,7 +46,7 @@ endif()
 include_directories(src)
 
 # NOTE: add source files for your players here
-set(player_src src/player/my_player.cpp src/player/my_observer.cpp)
+set(player_src src/player/my_player.cpp src/player/my_observer.cpp src/player/sequences.cpp)
 add_library(tttplayer STATIC ${player_src})
 target_link_libraries(tttplayer ${TTTCORE_LIB})
 
