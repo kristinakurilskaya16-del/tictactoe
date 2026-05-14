@@ -16,9 +16,6 @@ struct Pattern {
     bool has_gap = false;
     bool is_threat = false;
 
-    int left_empty = 0;   
-    int right_empty = 0;
-
     Pattern() : sign(Sign::NONE), length(0), open_ends(0) {}
 
     Pattern(Sign s, int len, int ends, bool gap, bool threat) : sign(s), 
@@ -45,24 +42,48 @@ struct Sequences {
 
 class SequencesAnalyzer {
 private:
+
     static inline Sign safe_get(const State& state, int x, int y) {
         if ( x < 0 || y < 0 || x >= state.get_opts().cols || y >= state.get_opts().rows)
             return Sign::WALL;
         return state.get_value(x, y);
     }
 
-    static inline Pattern scan_one_direction(const State& state, int x, int y, 
-                                    int dx, int dy, int win_len);
+    static void scan_one_way(const State& state, int x, int y, 
+                             int dx, int dy, Sign player, int win_len,
+                             int& len, int& open_ends, bool& has_gap);
 
 public:
-    static Pattern scan_direction(const State& state, int x, int y, 
-                                int dx, int dy, Sign opponent, int win_len);
-    static Sequences analyze(const State& state, int x, int y, int win_len = 5);
     
-    static std::vector<Point> find_all_threats(const State& state, 
-                                        Sign opponent, int win_len = 5);
-    static std::vector<Point> find_blocking_moves(const State& state, 
-                                        Sign opponent, int win_len = 5);
+    static Pattern scan_existing_line(const State& state, int x, int y, 
+                                    int dx, int dy, int win_len);
+
+    static Pattern evaluate_move_line(const State& state, int x, int y,
+                        int dx, int dy, Sign player, int win_len);
+
+};
+
+struct ThreatInfo {
+    std::vector<Point> winning_moves; // выигрыш в 1 ход
+    std::vector<Point> blocking_moves; // срочный блок
+    std::vector<Point> fork_moves; // двойные угрозы
+    std::vector<Point> strong_moves; // open four / strong three
+    int position_score = 0;
+};
+
+class ThreatEngine {
+public:
+
+    static ThreatInfo analyze(const State& state, Sign player, int win_len);
+
+private:
+
+    static bool is_near_activity(const State& state, int x, int y);
+
+    static bool in_bounds(const State& state, int x, int y) {
+        return x >= 0 && x < state.get_opts().cols && y >= 0 
+            && y < state.get_opts().rows;
+    }
 };
 
 }; // namespace ttt::my_player
