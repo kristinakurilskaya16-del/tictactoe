@@ -17,7 +17,7 @@ constexpr int WEIGHT_GAP_FOUR_OPEN0  = 120'000; // X_XXX – четыре в р�
 
 // Тройки (сплошные)
 constexpr int WEIGHT_OPEN_THREE = 30'000; // _XXX_ - три в ряд (open_ends=2)
-constexpr int WEIGHT_HALF_THREE = 5'000; // _XXX - три в ряд (open_ends=1)
+constexpr int WEIGHT_HALF_THREE = 6'000; // _XXX - три в ряд (open_ends=1)
 constexpr int WEIGHT_CLOSED_THREE = 0; // XXX - три в ряд (open_ends=0, бесполезна)
 
 // Тройки с дырой
@@ -26,12 +26,12 @@ constexpr int WEIGHT_GAP_THREE_OPEN1 = 15'000; // _XX_X  или XX_X_
 constexpr int WEIGHT_GAP_THREE_OPEN0 = 0; // XX_X
 
 // Двойки (сплошные)
-constexpr int WEIGHT_OPEN_TWO = 5'000; // _XX_ - два в ряд (open_ends=2)
+constexpr int WEIGHT_OPEN_TWO = 4'000; // _XX_ - два в ряд (open_ends=2)
 constexpr int WEIGHT_HALF_TWO = 1'000; // _XX - два в ряд (open_ends=1)
 constexpr int WEIGHT_CLOSED_TWO = 0; // XX - два в ряд (open_ends=0, бесполезна)
 
 // Двойки с дырой
-constexpr int WEIGHT_GAP_TWO_OPEN2   = 4'000;     // _X_X_
+constexpr int WEIGHT_GAP_TWO_OPEN2   = 3'000;     // _X_X_
 constexpr int WEIGHT_GAP_TWO_OPEN1   = 2'000;     // _X_X  или X_X_
 constexpr int WEIGHT_GAP_TWO_OPEN0   = 0;      // X_X
 
@@ -43,6 +43,6 @@ constexpr int WEIGHT_CENTER = 40;
 
 // Множители для атаки/защиты
 constexpr double ATTACK_FACTOR = 1.0;
-constexpr double DEFENSE_FACTOR = 0.9; // защита на 10% слабее атаки
+constexpr double DEFENSE_FACTOR = 0.9; 
  
 } // namespace ttt::my_player

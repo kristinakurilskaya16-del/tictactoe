@@ -5,14 +5,14 @@
 #include <cstdlib>
 
 int main(int argc, char *argv[]) {
-    std::cout << "Testing MyPlayer vs baseline easy player\n";
+    std::cout << "Testing MyPlayer vs baseline harder player\n";
     if (argc >= 2) {
         std::srand(atoi(argv[1]));
     }
 
     
     ttt::my_player::MyPlayer p1("MyPlayer"); ////поместите вашего игрока сюда
-    ttt::game::IPlayer *p2 = ttt::baseline::get_easy_player("BaselineEasy"); //здесь вы можете выбрать между базовыми игроками: сложным и лёгким
+    ttt::game::IPlayer *p2 = ttt::baseline::get_harder_player("BaselineEasy"); //здесь вы можете выбрать между базовыми игроками: сложным и лёгким
 
     auto result = ttt::test::run_game_tests(p1, *p2, 100); //здесь вы можете изменить количество тестовых итераций ~~ 100
     
