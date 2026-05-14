@@ -23,9 +23,9 @@ int main(int argc, char *argv[]) {
 
   auto field_initializer = ttt::game::RandomObstaclesFI(0.75, 50, 1);
 
-  // auto p1 = new ttt::my_player::MyPlayer("MyPlayer");
+  auto p1 = new ttt::my_player::MyPlayer("MyPlayer");
   // auto p1 = ttt::baseline::get_harder_player("p_easy");
-  auto p1 = ttt::baseline::get_easy_player("p_easy");
+  //auto p1 = ttt::baseline::get_easy_player("p_easy");
   auto p2 = new ttt::human_player::HumanPlayer("human_player");
   ttt::my_player::ConsoleWriter obs;
   ttt::game::Game game(opts, &field_initializer);
