@@ -12,4 +12,12 @@ tests/cmake_install.cmake
 tests/compile_commands.json
 tests/libtttplayer.a
 tests/tests/
-
+src/player/document.aux
+src/player/document.dvi
+src/player/document.log
+src/player/document.out
+src/player/document.pdf
+src/player/document.synctex.gz
+src/player/document.tex
+src/player/document.toc
+src/player/result.png

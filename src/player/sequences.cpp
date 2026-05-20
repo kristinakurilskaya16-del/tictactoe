@@ -15,7 +15,7 @@ int Pattern::get_pattern_weight() const {
             if (open_ends == 2) return WEIGHT_OPEN_FOUR;      
             if (open_ends == 1) return WEIGHT_HALF_FOUR;      
             return WEIGHT_CLOSED_FOUR;                         
-        } else { // has_gap == true
+        } else { 
             if (open_ends >= 2) return WEIGHT_GAP_FOUR_OPEN2; 
             if (open_ends == 1) return WEIGHT_GAP_FOUR_OPEN1; 
             return WEIGHT_GAP_FOUR_OPEN0;                      
@@ -52,18 +52,6 @@ int Pattern::get_pattern_weight() const {
     if (length == 1) return WEIGHT_SINGLE;                 
 
     return 0;
-}
-
-int Sequences::score_for(Sign player, int win_len) const {
-    int score = 0;
-    const Pattern* patterns[] = {&hor, &ver, &diag_rd, &diag_ld};
-    
-    for (const auto* pat : patterns) {
-        if (pat->sign != player) continue;
-        score += pat->get_pattern_weight();
-    }
-    
-    return score;
 }
 
 void SequencesAnalyzer::scan_one_way(const State& state, int x, int y, 

@@ -38,11 +38,7 @@ constexpr int WEIGHT_GAP_TWO_OPEN0   = 0;      // X_X
 // Одиночный камень
 constexpr int WEIGHT_SINGLE = 50; // один камень, позиционный вес
 
-// Бонус за центр 
-constexpr int WEIGHT_CENTER = 40;
-
-// Множители для атаки/защиты
-constexpr double ATTACK_FACTOR = 1.0;
+// Множитель для защиты
 constexpr double DEFENSE_FACTOR = 0.9; 
  
 } // namespace ttt::my_player
