@@ -325,26 +325,6 @@ int MyPlayer::count_free_cells(const State& state) const {
     return count;
 }
 
-bool MyPlayer::has_neighbors(const State &state, int x, int y, int radius) const {
-    int rows = state.get_opts().rows;
-    int cols = state.get_opts().cols;
-
-    int min_x = std::max(0, x - radius);
-    int max_x = std::min(cols - 1, x + radius);
-    int min_y = std::max(0, y - radius);
-    int max_y = std::min(rows - 1, y + radius);
-
-    for (int ny = min_y; ny <= max_y; ++ny) {
-        for (int nx = min_x; nx <= max_x; ++nx) {
-            if (nx == x && ny == y) continue;
-            Sign val = state.get_value(nx, ny);
-            if (val == Sign::X || val == Sign::O) return true;
-        }
-    }
-
-    return false;
-}
-
 Point MyPlayer::find_best_start(const State &state) const {
     int cx = state.get_opts().cols / 2;
     int cy = state.get_opts().rows / 2;
@@ -410,17 +390,6 @@ bool MyPlayer::would_win_fast(const State& state, int x, int y, Sign player) con
   return false;
 }
 
-Point MyPlayer::find_immediate_win_fast(const State& state) const {
-    auto candidates = get_candidate_moves(state);
-    for (const auto& c : candidates) {
-        State tmp = state;
-        tmp.process_move(m_sign, c.x, c.y);
-        if (would_win_fast(tmp, c.x, c.y, m_sign)) return c;
-    }
-
-    return {-1, -1};
-}
-
 std::vector<Point> MyPlayer::get_candidate_moves(const State &state) const {
 
     std::vector<Point> moves;
@@ -472,6 +441,5 @@ std::vector<Point> MyPlayer::get_candidate_moves(const State &state) const {
 
     return moves;
 }
-
 
 } // namespace ttt::my_player

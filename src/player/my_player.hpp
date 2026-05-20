@@ -20,21 +20,24 @@ class MyPlayer : public IPlayer {
   // счётчик вызовов negamax
   mutable int m_nodes_visited = 0;   
   static constexpr int MAX_NODES = 200; 
+
+  // вспомогательные методы
   bool square_is_free(const State &state, int x, int y) const;
   bool in_bounds(const State &state, int x, int y) const;
-  bool has_neighbors(const State &state, int x, int y, int radius = 2) const;
   int count_free_cells(const State& state) const;
+
+  // лучший старт
   Point find_best_start(const State &state) const;
 
+  // возможные ходы
   std::vector<Point> get_candidate_moves(const State &state) const;
   std::vector<Point> order_candidate_moves(const State& state, Sign player,
                                             int max_moves) const;
 
   // проверка выигрыша
   bool would_win_fast(const State& state, int x, int y, Sign player) const;
-  Point find_immediate_win_fast(const State& state) const;
 
-  //быстрая оценка всей доски (оконная, простая)
+  //быстрая оценка всей доски
   int evaluate_board_window(const State& state, Sign player) const;
   int line_value(int count) const;
 

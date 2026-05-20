@@ -22,22 +22,10 @@ struct Pattern {
         length(len), open_ends(ends), has_gap(gap), is_threat(threat) {}
 
     int get_pattern_weight() const;
-    
-    bool is_relevant() const {
-        return length >= 2 && open_ends > 0 && sign != Sign::NONE && 
-            sign != Sign::WALL;
-    }
-
-    bool is_winning(int win_len) const {
-        return length >= win_len && sign != Sign::NONE && 
-            sign != Sign::WALL;
-    }
 };
 
 struct Sequences {
     Pattern hor, ver, diag_rd, diag_ld;
-
-    int score_for(Sign player, int win_len = 5) const;
 };
 
 class SequencesAnalyzer {
@@ -67,17 +55,14 @@ struct ThreatInfo {
     std::vector<Point> winning_moves; // выигрыш в 1 ход
     std::vector<Point> blocking_moves; // срочный блок
     std::vector<Point> fork_moves; // двойные угрозы
-    std::vector<Point> strong_moves; // open four / strong three
     int position_score = 0;
 };
 
 class ThreatEngine {
 public:
-
     static ThreatInfo analyze(const State& state, Sign player, int win_len);
 
 private:
-
     static bool is_near_activity(const State& state, int x, int y);
 
     static bool in_bounds(const State& state, int x, int y) {
